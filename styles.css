@@ -290,6 +290,14 @@ button {
   display: grid;
   place-items: center;
   font-weight: 800;
+  overflow: hidden;
+}
+
+.robot-avatar img,
+.preview-icon img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .robot-meta {
@@ -354,7 +362,7 @@ button {
 
 .main-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(420px, 0.86fr);
+  grid-template-columns: 1fr;
   gap: 18px;
 }
 
@@ -374,6 +382,12 @@ button {
   gap: 14px;
   align-items: flex-start;
   margin-bottom: 16px;
+}
+
+.panel-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
 }
 
 .panel-heading p,
@@ -438,27 +452,6 @@ textarea:focus {
 
 .wide-field {
   margin-top: 14px;
-}
-
-.icon-picker {
-  display: grid;
-  grid-template-columns: repeat(5, 34px);
-  gap: 8px;
-}
-
-.icon-choice {
-  width: 34px;
-  height: 34px;
-  border-radius: 8px;
-  border: 1px solid var(--line);
-  background: var(--surface-soft);
-  font-weight: 800;
-}
-
-.icon-choice.active {
-  background: var(--primary);
-  color: #fff;
-  border-color: var(--primary);
 }
 
 .status-badge {
@@ -725,6 +718,88 @@ textarea:focus {
   margin: 0;
   color: var(--muted);
   font-size: 13px;
+}
+
+.context-menu {
+  position: fixed;
+  z-index: 30;
+  width: 190px;
+  padding: 7px;
+  background: #ffffff;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  box-shadow: var(--shadow);
+}
+
+.context-menu button {
+  width: 100%;
+  min-height: 34px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  text-align: left;
+  padding: 0 10px;
+}
+
+.context-menu button:hover {
+  background: var(--primary-soft);
+  color: var(--primary-strong);
+}
+
+.context-menu button.danger {
+  color: var(--danger);
+}
+
+.context-menu button.danger:hover {
+  background: #feeceb;
+}
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: grid;
+  place-items: center;
+  background: rgba(15, 23, 42, 0.28);
+  backdrop-filter: blur(6px);
+}
+
+.modal-panel {
+  width: min(720px, calc(100vw - 36px));
+  background: #ffffff;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  box-shadow: var(--shadow);
+  padding: 18px;
+}
+
+.modal-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.modal-heading h3,
+.modal-heading p {
+  margin: 0;
+}
+
+.modal-heading p {
+  color: var(--muted);
+  font-size: 13px;
+  margin-top: 4px;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 16px;
 }
 
 [data-icon] svg {

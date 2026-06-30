@@ -19,6 +19,8 @@ const iconMap = {
   at: "at-sign"
 };
 
+let contextRobotId = null;
+
 const providerMeta = {
   dingtalk: { label: "钉钉", hint: "oapi.dingtalk.com", color: "#2563eb" },
   feishu: { label: "飞书", hint: "open.feishu.cn", color: "#0ea5e9" },
@@ -162,7 +164,7 @@ function renderRobotList() {
       button.className = `robot-item ${robot.id === state.selectedId ? "active" : ""}`;
       button.type = "button";
       button.innerHTML = `
-        <div class="robot-avatar" style="background:${providerMeta[robot.provider].color}; color:white">${robot.icon}</div>
+        ${robotAvatarHTML(robot)}
         <div class="robot-meta">
           <strong>${escapeHTML(robot.name)}</strong>
           <span>${escapeHTML(robot.note || providerMeta[robot.provider].label)}</span>
@@ -173,6 +175,14 @@ function renderRobotList() {
         state.selectedId = robot.id;
         persist();
         renderAll();
+      });
+      button.addEventListener("contextmenu", (event) => {
+        event.preventDefault();
+        state.selectedId = robot.id;
+        contextRobotId = robot.id;
+        persist();
+        renderAll();
+        openContextMenu(event.clientX, event.clientY);
       });
       list.appendChild(button);
     });
@@ -190,10 +200,6 @@ function renderForm() {
 
   setValue("selectedProvider", meta.label, "text");
   setValue("selectedRobotName", robot.name, "text");
-  setValue("robotName", robot.name);
-  setValue("robotProvider", robot.provider);
-  setValue("robotNote", robot.note);
-  setValue("robotWebhook", robot.webhook);
   setValue("appKey", robot.credentials.appKey);
   setValue("appSecret", robot.credentials.appSecret);
   setValue("userId", robot.credentials.userId);
@@ -211,29 +217,11 @@ function renderForm() {
   badge.className = `status-badge ${detected ? "ok" : "warn"}`;
   badge.textContent = detected ? `识别为${providerMeta[detected].label}` : "待识别";
 
-  renderIconPicker(robot);
   renderPermissions(robot);
   renderFiles(robot);
   renderMentions(robot);
   renderSegmented();
   renderPreview(robot);
-}
-
-function renderIconPicker(robot) {
-  const picker = document.querySelector("#iconPicker");
-  picker.innerHTML = "";
-  ["D", "F", "W", "O", "R", "S", "M", "P", "A", "+"].forEach((icon) => {
-    const button = document.createElement("button");
-    button.type = "button";
-    button.className = `icon-choice ${robot.icon === icon ? "active" : ""}`;
-    button.textContent = icon;
-    button.addEventListener("click", () => {
-      robot.icon = icon;
-      persist();
-      renderAll();
-    });
-    picker.appendChild(button);
-  });
 }
 
 function renderPermissions(robot) {
@@ -309,6 +297,9 @@ function renderPreview(robot) {
   document.querySelector("#previewIcon").textContent = robot.icon;
   document.querySelector("#previewIcon").style.background = providerMeta[robot.provider].color;
   document.querySelector("#previewIcon").style.color = "#fff";
+  if (robot.iconPath) {
+    document.querySelector("#previewIcon").innerHTML = `<img alt="" src="${fileURL(robot.iconPath)}" />`;
+  }
   document.querySelector("#previewTitle").textContent = robot.name;
   document.querySelector("#previewMessage").textContent = renderTokens(robot.task.message);
   document.querySelector("#scheduleSummary").textContent = scheduleText(robot);
@@ -373,7 +364,6 @@ function refreshLiveRegions(robot) {
   const meta = providerMeta[robot.provider];
   setValue("selectedProvider", meta.label, "text");
   setValue("selectedRobotName", robot.name, "text");
-  setValue("robotProvider", robot.provider);
   const badge = document.querySelector("#webhookBadge");
   const detected = detectProvider(robot.webhook);
   badge.className = `status-badge ${detected ? "ok" : "warn"}`;
@@ -382,8 +372,77 @@ function refreshLiveRegions(robot) {
   renderIcons();
 }
 
+function robotAvatarHTML(robot) {
+  if (robot.iconPath) {
+    return `<div class="robot-avatar image-avatar" style="background:${providerMeta[robot.provider].color}"><img alt="" src="${fileURL(robot.iconPath)}" /></div>`;
+  }
+  return `<div class="robot-avatar" style="background:${providerMeta[robot.provider].color}; color:white">${escapeHTML(robot.icon)}</div>`;
+}
+
+function fileURL(path) {
+  return `file:///${String(path).replace(/\\/g, "/").replace(/^\/+/, "")}`;
+}
+
+function openContextMenu(x, y) {
+  const menu = document.querySelector("#robotContextMenu");
+  menu.hidden = false;
+  const { innerWidth, innerHeight } = window;
+  const width = 190;
+  const height = 230;
+  menu.style.left = `${Math.min(x, innerWidth - width - 10)}px`;
+  menu.style.top = `${Math.min(y, innerHeight - height - 10)}px`;
+}
+
+function closeContextMenu() {
+  document.querySelector("#robotContextMenu").hidden = true;
+}
+
+function contextRobot() {
+  return state.robots.find((robot) => robot.id === contextRobotId) || selectedRobot();
+}
+
+function openProfileModal(robot = selectedRobot()) {
+  contextRobotId = robot.id;
+  setValue("profileName", robot.name);
+  setValue("profileProvider", robot.provider);
+  setValue("profileNote", robot.note);
+  setValue("profileWebhook", robot.webhook);
+  document.querySelector("#profileModal").hidden = false;
+  renderIcons();
+}
+
+function closeProfileModal() {
+  document.querySelector("#profileModal").hidden = true;
+}
+
+async function chooseRobotIcon(robot) {
+  if (window.robotDesktop?.chooseFiles) {
+    const paths = await window.robotDesktop.chooseFiles();
+    if (!paths?.length) return;
+    robot.iconPath = paths[0];
+    robot.icon = " ";
+  } else {
+    const value = prompt("输入图标字母或图片路径", robot.iconPath || robot.icon || "R");
+    if (!value) return;
+    if (/\.(png|jpe?g|gif|webp|svg)$/i.test(value)) {
+      robot.iconPath = value;
+      robot.icon = " ";
+    } else {
+      robot.iconPath = "";
+      robot.icon = value.slice(0, 2).toUpperCase();
+    }
+  }
+  persist();
+  renderAll();
+}
+
 function wireEvents() {
   document.querySelector("#robotSearch").addEventListener("input", renderRobotList);
+  document.addEventListener("click", (event) => {
+    if (!event.target.closest("#robotContextMenu")) {
+      closeContextMenu();
+    }
+  });
   document.querySelectorAll(".provider-tab").forEach((button) => {
     button.addEventListener("click", () => {
       state.activeProvider = button.dataset.provider;
@@ -443,14 +502,6 @@ function wireEvents() {
   });
 
   [
-    ["robotName", (robot, value) => (robot.name = value)],
-    ["robotProvider", (robot, value) => (robot.provider = value)],
-    ["robotNote", (robot, value) => (robot.note = value)],
-    ["robotWebhook", (robot, value) => {
-      robot.webhook = value;
-      const detected = detectProvider(value);
-      if (detected) robot.provider = detected;
-    }],
     ["appKey", (robot, value) => (robot.credentials.appKey = value)],
     ["appSecret", (robot, value) => (robot.credentials.appSecret = value)],
     ["userId", (robot, value) => (robot.credentials.userId = value)],
@@ -464,9 +515,65 @@ function wireEvents() {
     ["messageBody", (robot, value) => (robot.task.message = value)]
   ].forEach(([id, setter]) => {
     document.querySelector(`#${id}`).addEventListener("input", (event) => {
-      const rerender = ["robotProvider"].includes(id);
-      updateSelected((robot) => setter(robot, event.target.value), rerender);
+      updateSelected((robot) => setter(robot, event.target.value), false);
     });
+  });
+
+  document.querySelector("#robotContextMenu").addEventListener("click", async (event) => {
+    const button = event.target.closest("[data-context-action]");
+    if (!button) return;
+    const action = button.dataset.contextAction;
+    const robot = contextRobot();
+    closeContextMenu();
+    if (action === "profile") {
+      openProfileModal(robot);
+    }
+    if (action === "rename") {
+      const value = prompt("重命名机器人", robot.name);
+      if (value) updateSelected((selected) => (selected.name = value.trim() || selected.name));
+    }
+    if (action === "icon") {
+      await chooseRobotIcon(robot);
+    }
+    if (action === "type") {
+      const value = prompt("修改类型：dingtalk / feishu / wecom", robot.provider);
+      if (providerMeta[value]) updateSelected((selected) => (selected.provider = value));
+    }
+    if (action === "note") {
+      const value = prompt("备注", robot.note || "");
+      if (value !== null) updateSelected((selected) => (selected.note = value));
+    }
+    if (action === "delete") {
+      if (state.robots.length <= 1) {
+        toast("无法删除", "至少需要保留一个机器人。");
+        return;
+      }
+      if (!confirm(`删除机器人「${robot.name}」？`)) return;
+      state.robots = state.robots.filter((item) => item.id !== robot.id);
+      state.selectedId = state.robots[0].id;
+      persist();
+      renderAll();
+    }
+  });
+
+  document.querySelector("#closeProfileModal").addEventListener("click", closeProfileModal);
+  document.querySelector("#cancelProfileBtn").addEventListener("click", closeProfileModal);
+  document.querySelector("#profileIconBtn").addEventListener("click", async () => {
+    await chooseRobotIcon(contextRobot());
+    openProfileModal(contextRobot());
+  });
+  document.querySelector("#saveProfileBtn").addEventListener("click", () => {
+    const robot = contextRobot();
+    robot.name = document.querySelector("#profileName").value.trim() || robot.name;
+    robot.provider = document.querySelector("#profileProvider").value;
+    robot.note = document.querySelector("#profileNote").value;
+    robot.webhook = document.querySelector("#profileWebhook").value;
+    const detected = detectProvider(robot.webhook);
+    if (detected) robot.provider = detected;
+    state.selectedId = robot.id;
+    persist();
+    closeProfileModal();
+    renderAll();
   });
 
   document.querySelector(".segmented").addEventListener("click", (event) => {

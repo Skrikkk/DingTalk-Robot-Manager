@@ -3,14 +3,14 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Robot Sender</title>
+    <title>Robot Manager</title>
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
     <header class="window-chrome">
       <div class="window-drag-region">
         <div class="window-dot"></div>
-        <span>Robot Sender</span>
+        <span>Robot Manager</span>
       </div>
       <div class="window-controls">
         <button type="button" title="最小化" data-window-action="minimize">
@@ -27,9 +27,9 @@
     <div class="app-shell">
       <aside class="sidebar">
         <div class="brand-row">
-          <div class="app-mark">RS</div>
+          <div class="app-mark">RM</div>
           <div>
-            <h1>Robot Sender</h1>
+            <h1>Robot Manager</h1>
             <p>Webhook task console</p>
           </div>
         </div>
@@ -58,13 +58,9 @@
         <header class="topbar">
           <div>
             <div id="selectedProvider" class="provider-label">钉钉</div>
-            <h2 id="selectedRobotName">DDS Daily Update</h2>
+            <h2 id="selectedRobotName" tabindex="0" title="单击编辑机器人名称">DDS Daily Update</h2>
           </div>
           <div class="topbar-actions">
-            <button id="duplicateRobotBtn" class="ghost-button" type="button">
-              <span data-icon="copy"></span>
-              复制配置
-            </button>
             <button id="saveRobotBtn" class="primary-button" type="button">
               <span data-icon="save"></span>
               保存
@@ -135,7 +131,7 @@
           <div class="panel-heading">
             <div>
               <h3>发送配置</h3>
-              <p>消息、附件、定时和预览</p>
+              <p>消息、附件、@ 人和定时</p>
             </div>
             <div class="segmented">
               <button class="active" type="button" data-mode="once">单次</button>
@@ -204,23 +200,7 @@
                 <div id="mentionList" class="mention-list"></div>
               </div>
             </div>
-
-            <aside class="preview-panel">
-              <div class="preview-heading">
-                <h3>预览</h3>
-                <span id="scheduleSummary" class="status-badge neutral">单次发送</span>
-              </div>
-              <div class="preview-card">
-                <div id="previewIcon" class="preview-icon">D</div>
-                <div class="preview-content">
-                  <strong id="previewTitle">DDS Daily Update</strong>
-                  <pre id="previewMessage"></pre>
-                  <div id="previewFiles" class="preview-files"></div>
-                  <div id="previewMentions" class="preview-mentions"></div>
-                </div>
-              </div>
-              <div id="validationMessages" class="validation-messages"></div>
-              <div class="preview-actions">
+              <div class="config-actions">
                 <button id="dryRunBtn" class="secondary-button" type="button">
                   <span data-icon="play"></span>
                   模拟发送
@@ -230,7 +210,6 @@
                   导出任务
                 </button>
               </div>
-            </aside>
           </div>
         </section>
       </main>
@@ -242,6 +221,7 @@
       <button type="button" data-context-action="icon">修改图标</button>
       <button type="button" data-context-action="type">修改类型</button>
       <button type="button" data-context-action="note">备注</button>
+      <button type="button" data-context-action="copy">复制</button>
       <button class="danger" type="button" data-context-action="delete">删除</button>
     </div>
 
@@ -293,6 +273,7 @@
     </div>
 
     <div id="toastHost" class="toast-host" aria-live="polite"></div>
+    <input id="iconFilePicker" type="file" accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml" hidden />
     <script src="./vendor/lucide.min.js"></script>
     <script src="./app.js"></script>
   </body>

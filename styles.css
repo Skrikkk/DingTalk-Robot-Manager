@@ -45,6 +45,48 @@ button {
   cursor: pointer;
 }
 
+@keyframes menuIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes modalFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes modalPanelIn {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes surfaceSwitch {
+  from {
+    opacity: 0.74;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 .app-shell {
   display: grid;
   grid-template-columns: 320px minmax(0, 1fr);
@@ -249,6 +291,11 @@ button {
   background: var(--primary-faint);
   color: #475569;
   border-radius: 8px;
+  transition: background-color 160ms ease, border-color 160ms ease, color 160ms ease, transform 160ms ease;
+}
+
+.provider-tab:hover {
+  transform: translateY(-1px);
 }
 
 .provider-tab.active {
@@ -277,6 +324,13 @@ button {
   border-radius: 8px;
   padding: 10px;
   text-align: left;
+  transition: transform 180ms ease, border-color 180ms ease, background-color 180ms ease, box-shadow 180ms ease;
+  animation: surfaceSwitch 220ms ease both;
+}
+
+.robot-item:hover {
+  transform: translateY(-1px);
+  border-color: var(--line-strong);
 }
 
 .robot-item.active {
@@ -286,8 +340,7 @@ button {
   box-shadow: var(--shadow);
 }
 
-.robot-avatar,
-.preview-icon {
+.robot-avatar {
   width: 42px;
   height: 42px;
   border-radius: 8px;
@@ -297,8 +350,7 @@ button {
   overflow: hidden;
 }
 
-.robot-avatar img,
-.preview-icon img {
+.robot-avatar img {
   width: 100%;
   height: 100%;
   object-fit: cover;
@@ -340,6 +392,11 @@ button {
   overflow: auto;
 }
 
+.workspace.is-switching .topbar,
+.workspace.is-switching .panel {
+  animation: surfaceSwitch 260ms ease both;
+}
+
 .topbar {
   min-height: 68px;
   display: flex;
@@ -357,6 +414,24 @@ button {
 .topbar h2 {
   font-size: 26px;
   margin-top: 4px;
+  display: inline-flex;
+  max-width: min(720px, 60vw);
+  border: 1px solid transparent;
+  border-radius: 8px;
+  padding: 3px 7px;
+  cursor: text;
+  transition: border-color 160ms ease, background-color 160ms ease, box-shadow 160ms ease;
+}
+
+.topbar h2:hover,
+.topbar h2.editing {
+  background: #fff;
+  border-color: #c8dcff;
+}
+
+.topbar h2.editing {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
 }
 
 .topbar-actions {
@@ -518,6 +593,13 @@ textarea:focus {
   grid-template-columns: 28px minmax(0, 1fr);
   gap: 10px;
   align-items: center;
+  transition: transform 180ms ease, border-color 180ms ease, background-color 180ms ease;
+  animation: surfaceSwitch 220ms ease both;
+}
+
+.permission-item:hover {
+  transform: translateY(-1px);
+  border-color: var(--line-strong);
 }
 
 .permission-icon {
@@ -572,6 +654,7 @@ textarea:focus {
   border-radius: 6px;
   color: #475569;
   min-height: 32px;
+  transition: background-color 160ms ease, color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
 }
 
 .segmented button.active {
@@ -582,9 +665,7 @@ textarea:focus {
 }
 
 .config-layout {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 380px;
-  gap: 18px;
+  display: block;
 }
 
 .config-stack {
@@ -599,6 +680,7 @@ textarea:focus {
   border-radius: 8px;
   padding: 14px;
   background: var(--primary-faint);
+  transition: border-color 180ms ease, background-color 180ms ease;
 }
 
 .file-list,
@@ -632,102 +714,12 @@ textarea:focus {
   color: var(--danger);
 }
 
-.preview-panel {
-  position: sticky;
-  top: 22px;
-  align-self: start;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  padding: 16px;
-  background: var(--primary-faint);
-}
-
-.preview-card {
-  border: 1px solid var(--line);
-  background: #fff;
-  border-radius: 8px;
-  padding: 14px;
-  display: grid;
-  grid-template-columns: 42px minmax(0, 1fr);
-  gap: 12px;
-}
-
-.preview-icon {
-  background: var(--primary-soft);
-  color: var(--primary-strong);
-}
-
-.preview-content {
-  min-width: 0;
-}
-
-.preview-content pre {
-  margin: 8px 0 0;
-  white-space: pre-wrap;
-  word-break: break-word;
-  font-family: inherit;
-  line-height: 1.5;
-  color: #243145;
-}
-
-.preview-files,
-.preview-mentions {
+.config-actions {
   display: flex;
+  justify-content: flex-end;
   flex-wrap: wrap;
-  gap: 7px;
-  margin-top: 12px;
-}
-
-.pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  min-height: 28px;
-  max-width: 100%;
-  padding: 0 9px;
-  background: #eef2f7;
-  border-radius: 999px;
-  color: #354258;
-  font-size: 12px;
-}
-
-.pill span:last-child {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.validation-messages {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin-top: 14px;
-}
-
-.validation-item {
-  border-radius: 8px;
-  padding: 9px 10px;
-  font-size: 13px;
-  border: 1px solid var(--line);
-}
-
-.validation-item.warn {
-  border-color: #f2cc8f;
-  background: #fff8eb;
-  color: #7a4c09;
-}
-
-.validation-item.ok {
-  border-color: #a9dfbf;
-  background: #ecf9f1;
-  color: #145c36;
-}
-
-.preview-actions {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
   gap: 10px;
-  margin-top: 14px;
+  padding-top: 2px;
 }
 
 .toast-host {
@@ -769,6 +761,8 @@ textarea:focus {
   border: 1px solid var(--line);
   border-radius: 8px;
   box-shadow: var(--shadow);
+  transform-origin: top left;
+  animation: menuIn 150ms ease both;
 }
 
 .context-menu button {
@@ -805,6 +799,7 @@ textarea:focus {
   place-items: center;
   background: rgba(15, 23, 42, 0.28);
   backdrop-filter: blur(6px);
+  animation: modalFadeIn 180ms ease both;
 }
 
 .modal-panel {
@@ -814,6 +809,7 @@ textarea:focus {
   border-radius: 8px;
   box-shadow: var(--shadow);
   padding: 18px;
+  animation: modalPanelIn 210ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
 }
 
 .modal-heading {
@@ -854,13 +850,8 @@ textarea:focus {
     grid-template-columns: 280px minmax(0, 1fr);
   }
 
-  .main-grid,
-  .config-layout {
+  .main-grid {
     grid-template-columns: 1fr;
-  }
-
-  .preview-panel {
-    position: static;
   }
 }
 
@@ -886,7 +877,7 @@ textarea:focus {
   }
 
   .topbar-actions,
-  .preview-actions {
+  .config-actions {
     grid-template-columns: 1fr;
     display: grid;
   }
@@ -897,5 +888,15 @@ textarea:focus {
   .file-row,
   .mention-row {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 1ms !important;
+    transition-duration: 1ms !important;
+    scroll-behavior: auto !important;
   }
 }

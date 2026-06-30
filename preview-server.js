@@ -31,5 +31,5 @@ http.createServer((req, res) => {
     res.end(data);
   });
 }).listen(port, "127.0.0.1", () => {
-  console.log(`Robot Sender preview: http://127.0.0.1:${port}/index.html`);
+  console.log(`Robot Manager preview: http://127.0.0.1:${port}/index.html`);
 });

@@ -1,8 +1,8 @@
 {
-  "name": "robot-sender-window",
+  "name": "robot-manager-window",
   "version": "0.1.0",
   "private": true,
-  "description": "Standalone desktop shell for webhook robot message and file scheduling.",
+  "description": "Standalone desktop shell for webhook robot management and scheduled sending.",
   "main": "electron/main.js",
   "scripts": {
     "start": "electron .",

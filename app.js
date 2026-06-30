@@ -1,4 +1,5 @@
-const STORAGE_KEY = "robot-sender-ui-state-v1";
+const STORAGE_KEY = "robot-manager-ui-state-v1";
+const LEGACY_STORAGE_KEYS = ["robot-sender-ui-state-v1"];
 
 const iconMap = {
   search: "search",
@@ -22,6 +23,7 @@ const iconMap = {
 };
 
 let contextRobotId = null;
+let switchAnimationTimer = null;
 
 const providerMeta = {
   dingtalk: { label: "钉钉", hint: "oapi.dingtalk.com", color: "#2563eb" },
@@ -117,7 +119,7 @@ function todayISO() {
 
 function loadState() {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = localStorage.getItem(STORAGE_KEY) || LEGACY_STORAGE_KEYS.map((key) => localStorage.getItem(key)).find(Boolean);
     return raw ? JSON.parse(raw) : structuredClone(initialState);
   } catch {
     return structuredClone(initialState);
@@ -244,7 +246,6 @@ function renderForm() {
   renderMentions(robot);
   renderSegmented();
   renderScheduleFields();
-  renderPreview(robot);
 }
 
 function renderPermissions(robot) {
@@ -255,10 +256,12 @@ function renderPermissions(robot) {
     ["mentions", "@ 人", "无权限时 @ 列表会被忽略"],
     ["schedule", "定时任务", "无权限时需要外部计划任务"]
   ];
+  const sortedItems = items
+    .map(([key, title, desc], priority) => ({ key, title, desc, priority, ok: Boolean(robot.permissions[key]) }))
+    .sort((a, b) => Number(a.ok) - Number(b.ok) || a.priority - b.priority);
   const wrap = document.querySelector("#permissionList");
-  wrap.innerHTML = items
-    .map(([key, title, desc]) => {
-      const ok = robot.permissions[key];
+  wrap.innerHTML = sortedItems
+    .map(({ title, desc, ok }) => {
       return `
         <div class="permission-item">
           <span class="permission-icon ${ok ? "ok" : "warn"}">${ok ? "✓" : "!"}</span>
@@ -322,55 +325,6 @@ function renderScheduleFields() {
   });
 }
 
-function renderPreview(robot) {
-  document.querySelector("#previewIcon").textContent = robot.icon;
-  document.querySelector("#previewIcon").style.background = providerMeta[robot.provider].color;
-  document.querySelector("#previewIcon").style.color = "#fff";
-  if (robot.iconPath) {
-    document.querySelector("#previewIcon").innerHTML = `<img alt="" src="${fileURL(robot.iconPath)}" />`;
-  }
-  document.querySelector("#previewTitle").textContent = robot.name;
-  document.querySelector("#previewMessage").textContent = renderTokens(robot.task.message);
-  document.querySelector("#scheduleSummary").textContent = scheduleText(robot);
-
-  document.querySelector("#previewFiles").innerHTML = robot.task.files
-    .map((file) => `<span class="pill"><span data-icon="file"></span><span>${escapeHTML(file.path || "未选择文件")}</span></span>`)
-    .join("");
-  document.querySelector("#previewMentions").innerHTML = robot.task.mentions
-    .map((mention) => `<span class="pill"><span data-icon="at"></span><span>@${escapeHTML(mention.value || mention.type)}</span></span>`)
-    .join("");
-
-  const validations = [];
-  if (!detectProvider(robot.webhook)) validations.push(["warn", "Webhook 未识别平台，仍可保存但需要手动确认。"]);
-  if (!robot.permissions.sendText) validations.push(["warn", "无发送消息权限，将无法推送文本。"]);
-  if (robot.task.files.length && !robot.permissions.uploadFile) validations.push(["warn", "无上传附件权限，附件发送可能失败。"]);
-  if (!validations.length) validations.push(["ok", "当前配置满足基础发送条件。"]);
-  document.querySelector("#validationMessages").innerHTML = validations
-    .map(([type, text]) => `<div class="validation-item ${type}">${text}</div>`)
-    .join("");
-}
-
-function scheduleText(robot) {
-  const rule = robot.task.repeatRule;
-  const time = `${robot.task.sendDate || "未定日期"} ${robot.task.sendTime || "未定时间"}`;
-  if (state.sendMode === "once" || rule === "none") return `单次 ${time}`;
-  const labels = { daily: "每天", weekday: "工作日", weekly: "每周", monthly: "每月", cron: "Cron" };
-  return `定时 ${labels[rule] || "不重复"} ${robot.task.sendTime || ""}`;
-}
-
-function renderTokens(text) {
-  const now = new Date();
-  const yy = String(now.getFullYear()).slice(2);
-  const yyyy = String(now.getFullYear());
-  const mm = String(now.getMonth() + 1).padStart(2, "0");
-  const dd = String(now.getDate()).padStart(2, "0");
-  return String(text || "")
-    .replaceAll("{today_yymmdd}", `${yy}${mm}${dd}`)
-    .replaceAll("{yyMMdd}", `${yy}${mm}${dd}`)
-    .replaceAll("{yyyyMMdd}", `${yyyy}${mm}${dd}`)
-    .replaceAll("{yyyy-MM-dd}", `${yyyy}-${mm}-${dd}`);
-}
-
 function setValue(id, value, mode = "value") {
   const el = document.querySelector(`#${id}`);
   if (!el) return;
@@ -397,13 +351,13 @@ function refreshLiveRegions(robot) {
   const detected = detectProvider(robot.webhook);
   badge.className = `status-badge ${detected ? "ok" : "warn"}`;
   badge.textContent = detected ? `识别为${providerMeta[detected].label}` : "待识别";
-  renderPreview(robot);
   renderIcons();
 }
 
 function robotAvatarHTML(robot) {
-  if (robot.iconPath) {
-    return `<div class="robot-avatar image-avatar" style="background:${providerMeta[robot.provider].color}"><img alt="" src="${fileURL(robot.iconPath)}" /></div>`;
+  const imageSource = robot.iconDataUrl || (robot.iconPath ? fileURL(robot.iconPath) : "");
+  if (imageSource) {
+    return `<div class="robot-avatar image-avatar" style="background:${providerMeta[robot.provider].color}"><img alt="" src="${imageSource}" /></div>`;
   }
   return `<div class="robot-avatar" style="background:${providerMeta[robot.provider].color}; color:white">${escapeHTML(robot.icon)}</div>`;
 }
@@ -416,10 +370,9 @@ function openContextMenu(x, y) {
   const menu = document.querySelector("#robotContextMenu");
   menu.hidden = false;
   const { innerWidth, innerHeight } = window;
-  const width = 190;
-  const height = 230;
-  menu.style.left = `${Math.min(x, innerWidth - width - 10)}px`;
-  menu.style.top = `${Math.min(y, innerHeight - height - 10)}px`;
+  const rect = menu.getBoundingClientRect();
+  menu.style.left = `${Math.max(10, Math.min(x, innerWidth - rect.width - 10))}px`;
+  menu.style.top = `${Math.max(10, Math.min(y, innerHeight - rect.height - 10))}px`;
 }
 
 function closeContextMenu() {
@@ -444,25 +397,106 @@ function closeProfileModal() {
   document.querySelector("#profileModal").hidden = true;
 }
 
+function duplicateRobot(robot = selectedRobot()) {
+  const copy = structuredClone(robot);
+  copy.id = `robot-${Date.now()}`;
+  copy.name = `${copy.name} Copy`;
+  state.robots.unshift(copy);
+  state.selectedId = copy.id;
+  contextRobotId = copy.id;
+  persist();
+  renderAll();
+  toast("已复制配置", "新机器人已添加到列表顶部。");
+}
+
 async function chooseRobotIcon(robot) {
-  if (window.robotDesktop?.chooseFiles) {
-    const paths = await window.robotDesktop.chooseFiles();
+  if (window.robotDesktop?.chooseIcon) {
+    const paths = await window.robotDesktop.chooseIcon();
     if (!paths?.length) return;
     robot.iconPath = paths[0];
+    robot.iconDataUrl = "";
     robot.icon = " ";
   } else {
-    const value = prompt("输入图标字母或图片路径", robot.iconPath || robot.icon || "R");
-    if (!value) return;
-    if (/\.(png|jpe?g|gif|webp|svg)$/i.test(value)) {
-      robot.iconPath = value;
-      robot.icon = " ";
-    } else {
-      robot.iconPath = "";
-      robot.icon = value.slice(0, 2).toUpperCase();
-    }
+    const file = await chooseBrowserIconFile();
+    if (!file) return;
+    robot.iconPath = file.name;
+    robot.iconDataUrl = file.dataUrl;
+    robot.icon = " ";
   }
   persist();
   renderAll();
+}
+
+function chooseBrowserIconFile() {
+  const picker = document.querySelector("#iconFilePicker");
+  return new Promise((resolve) => {
+    let settled = false;
+    const finish = (value) => {
+      if (settled) return;
+      settled = true;
+      resolve(value);
+    };
+    picker.value = "";
+    picker.addEventListener(
+      "change",
+      () => {
+        const file = picker.files?.[0];
+        if (!file) {
+          finish(null);
+          return;
+        }
+        const reader = new FileReader();
+        reader.addEventListener("load", () => finish({ name: file.name, dataUrl: reader.result }));
+        reader.addEventListener("error", () => finish(null));
+        reader.readAsDataURL(file);
+      },
+      { once: true }
+    );
+    picker.addEventListener("cancel", () => finish(null), { once: true });
+    window.addEventListener("focus", () => setTimeout(() => {
+      if (!picker.files?.length) finish(null);
+    }, 800), { once: true });
+    picker.click();
+  });
+}
+
+function beginNameEdit() {
+  const title = document.querySelector("#selectedRobotName");
+  if (title.isContentEditable) return;
+  title.contentEditable = "true";
+  title.classList.add("editing");
+  title.focus();
+  const range = document.createRange();
+  range.selectNodeContents(title);
+  const selection = window.getSelection();
+  selection.removeAllRanges();
+  selection.addRange(range);
+}
+
+function finishNameEdit(save = true) {
+  const title = document.querySelector("#selectedRobotName");
+  if (!title.isContentEditable) return;
+  const robot = selectedRobot();
+  const value = title.textContent.trim();
+  title.contentEditable = "false";
+  title.classList.remove("editing");
+  if (save && value) {
+    updateSelected((item) => {
+      item.name = value;
+    });
+  } else {
+    title.textContent = robot.name;
+  }
+}
+
+function animateWorkspace() {
+  const workspace = document.querySelector(".workspace");
+  if (!workspace) return;
+  workspace.classList.remove("is-switching");
+  void workspace.offsetWidth;
+  workspace.classList.add("is-switching");
+  clearTimeout(switchAnimationTimer);
+  switchAnimationTimer = setTimeout(() => workspace.classList.remove("is-switching"), 360);
 }
 
 function wireEvents() {
@@ -498,21 +532,23 @@ function wireEvents() {
     renderAll();
   });
 
-  document.querySelector("#duplicateRobotBtn").addEventListener("click", () => {
-    const copy = structuredClone(selectedRobot());
-    copy.id = `robot-${Date.now()}`;
-    copy.name = `${copy.name} Copy`;
-    state.robots.unshift(copy);
-    state.selectedId = copy.id;
-    persist();
-    renderAll();
-    toast("已复制配置", "新机器人已添加到列表顶部。");
-  });
-
   document.querySelector("#saveRobotBtn").addEventListener("click", () => {
     persist();
     toast("已保存", "配置已保存到浏览器 localStorage。");
   });
+
+  document.querySelector("#selectedRobotName").addEventListener("click", beginNameEdit);
+  document.querySelector("#selectedRobotName").addEventListener("keydown", (event) => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      finishNameEdit(true);
+    }
+    if (event.key === "Escape") {
+      event.preventDefault();
+      finishNameEdit(false);
+    }
+  });
+  document.querySelector("#selectedRobotName").addEventListener("blur", () => finishNameEdit(true));
 
   document.querySelector("#runCheckBtn").addEventListener("click", () => {
     updateSelected((robot) => {
@@ -583,6 +619,9 @@ function wireEvents() {
     if (action === "note") {
       const value = prompt("备注", robot.note || "");
       if (value !== null) updateSelected((selected) => (selected.note = value));
+    }
+    if (action === "copy") {
+      duplicateRobot(robot);
     }
     if (action === "delete") {
       if (state.robots.length <= 1) {
@@ -739,6 +778,7 @@ function renderAll() {
   renderRobotList();
   renderForm();
   renderIcons();
+  requestAnimationFrame(animateWorkspace);
 }
 
 wireEvents();

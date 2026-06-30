@@ -10,7 +10,7 @@ function createWindow() {
     minWidth: 1080,
     minHeight: 720,
     frame: false,
-    title: "Robot Sender",
+    title: "Robot Manager",
     backgroundColor: "#f5f7fb",
     show: false,
     webPreferences: {
@@ -66,6 +66,19 @@ ipcMain.handle("dialog:chooseFiles", async () => {
     properties: ["openFile", "multiSelections"],
     filters: [
       { name: "Common files", extensions: ["pdf", "xlsx", "xls", "csv", "docx", "png", "jpg", "jpeg", "zip"] },
+      { name: "All files", extensions: ["*"] }
+    ]
+  });
+  return result.canceled ? [] : result.filePaths;
+});
+
+ipcMain.handle("dialog:chooseIcon", async () => {
+  const win = BrowserWindow.getFocusedWindow();
+  const result = await dialog.showOpenDialog(win, {
+    title: "选择机器人图标",
+    properties: ["openFile"],
+    filters: [
+      { name: "Images", extensions: ["png", "jpg", "jpeg", "webp", "gif", "svg"] },
       { name: "All files", extensions: ["*"] }
     ]
   });

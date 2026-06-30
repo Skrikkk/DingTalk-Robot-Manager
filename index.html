@@ -1,0 +1,271 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Robot Sender</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <header class="window-chrome">
+      <div class="window-drag-region">
+        <div class="window-dot"></div>
+        <span>Robot Sender</span>
+      </div>
+      <div class="window-controls">
+        <button type="button" title="最小化" data-window-action="minimize">
+          <span data-icon="minimize"></span>
+        </button>
+        <button type="button" title="最大化" data-window-action="maximize">
+          <span data-icon="maximize"></span>
+        </button>
+        <button type="button" title="关闭" data-window-action="close">
+          <span data-icon="close"></span>
+        </button>
+      </div>
+    </header>
+    <div class="app-shell">
+      <aside class="sidebar">
+        <div class="brand-row">
+          <div class="app-mark">RS</div>
+          <div>
+            <h1>Robot Sender</h1>
+            <p>Webhook task console</p>
+          </div>
+        </div>
+
+        <div class="sidebar-tools">
+          <div class="search-box">
+            <span data-icon="search"></span>
+            <input id="robotSearch" type="search" placeholder="搜索机器人" />
+          </div>
+          <button id="addRobotBtn" class="icon-button" type="button" title="新增机器人">
+            <span data-icon="plus"></span>
+          </button>
+        </div>
+
+        <nav class="provider-tabs" aria-label="机器人分组">
+          <button class="provider-tab active" type="button" data-provider="all">全部</button>
+          <button class="provider-tab" type="button" data-provider="dingtalk">钉钉</button>
+          <button class="provider-tab" type="button" data-provider="feishu">飞书</button>
+          <button class="provider-tab" type="button" data-provider="wecom">企微</button>
+        </nav>
+
+        <div id="robotList" class="robot-list"></div>
+      </aside>
+
+      <main class="workspace">
+        <header class="topbar">
+          <div>
+            <div id="selectedProvider" class="provider-label">钉钉</div>
+            <h2 id="selectedRobotName">DDS Daily Update</h2>
+          </div>
+          <div class="topbar-actions">
+            <button id="duplicateRobotBtn" class="ghost-button" type="button">
+              <span data-icon="copy"></span>
+              复制配置
+            </button>
+            <button id="saveRobotBtn" class="primary-button" type="button">
+              <span data-icon="save"></span>
+              保存
+            </button>
+          </div>
+        </header>
+
+        <section class="main-grid">
+          <section class="panel identity-panel">
+            <div class="panel-heading">
+              <div>
+                <h3>机器人档案</h3>
+                <p>名称、分组、图标和 Webhook</p>
+              </div>
+              <span id="webhookBadge" class="status-badge ok">已识别</span>
+            </div>
+
+            <div class="form-grid two-columns">
+              <label>
+                <span>机器人名称</span>
+                <input id="robotName" type="text" />
+              </label>
+              <label>
+                <span>类型</span>
+                <select id="robotProvider">
+                  <option value="dingtalk">钉钉</option>
+                  <option value="feishu">飞书</option>
+                  <option value="wecom">企业微信</option>
+                </select>
+              </label>
+              <label>
+                <span>图标</span>
+                <div class="icon-picker" id="iconPicker"></div>
+              </label>
+              <label>
+                <span>备注</span>
+                <input id="robotNote" type="text" />
+              </label>
+            </div>
+
+            <label class="wide-field">
+              <span>Webhook</span>
+              <textarea id="robotWebhook" rows="3"></textarea>
+            </label>
+          </section>
+
+          <section class="panel auth-panel">
+            <div class="panel-heading">
+              <div>
+                <h3>登录与权限检查</h3>
+                <p>先验证身份参数，再进入配置</p>
+              </div>
+              <button id="runCheckBtn" class="secondary-button" type="button">
+                <span data-icon="shield-check"></span>
+                检查
+              </button>
+            </div>
+
+            <div class="form-grid three-columns">
+              <label>
+                <span>App Key / Bot ID</span>
+                <input id="appKey" type="text" placeholder="钉钉 AppKey 或平台 Bot ID" />
+              </label>
+              <label>
+                <span>App Secret</span>
+                <input id="appSecret" type="password" placeholder="用于上传附件" />
+              </label>
+              <label>
+                <span>用户 ID</span>
+                <input id="userId" type="text" placeholder="发起人或测试用户" />
+              </label>
+              <label>
+                <span>部门 ID</span>
+                <input id="deptId" type="text" placeholder="可选" />
+              </label>
+              <label>
+                <span>测试 @ 人</span>
+                <input id="testAt" type="text" placeholder="手机号或 userId" />
+              </label>
+              <label>
+                <span>环境</span>
+                <select id="environment">
+                  <option>生产</option>
+                  <option>测试</option>
+                  <option>沙箱</option>
+                </select>
+              </label>
+            </div>
+
+            <div id="permissionList" class="permission-list"></div>
+          </section>
+        </section>
+
+        <section class="panel config-panel">
+          <div class="panel-heading">
+            <div>
+              <h3>发送配置</h3>
+              <p>消息、附件、定时和预览</p>
+            </div>
+            <div class="segmented">
+              <button class="active" type="button" data-mode="once">单次</button>
+              <button type="button" data-mode="schedule">定时</button>
+              <button type="button" data-mode="recurring">定期</button>
+            </div>
+          </div>
+
+          <div class="config-layout">
+            <div class="config-stack">
+              <div class="form-grid two-columns">
+                <label>
+                  <span>发送日期</span>
+                  <input id="sendDate" type="date" />
+                </label>
+                <label>
+                  <span>发送时间</span>
+                  <input id="sendTime" type="time" />
+                </label>
+                <label>
+                  <span>重复规则</span>
+                  <select id="repeatRule">
+                    <option value="none">不重复</option>
+                    <option value="daily">每天</option>
+                    <option value="weekday">工作日</option>
+                    <option value="weekly">每周</option>
+                    <option value="monthly">每月</option>
+                    <option value="cron">Cron 表达式</option>
+                  </select>
+                </label>
+                <label>
+                  <span>Cron / 文件日期模式</span>
+                  <input id="patternInput" type="text" placeholder="{yyyyMMdd} 或 .*{yyMMdd}.*\\.pdf" />
+                </label>
+              </div>
+
+              <label class="wide-field">
+                <span>发送消息</span>
+                <textarea id="messageBody" rows="8"></textarea>
+              </label>
+
+              <div class="file-section">
+                <div class="file-header">
+                  <div>
+                    <h4>附件</h4>
+                    <p>支持固定文件，也支持按日期规则匹配每日变化文件</p>
+                  </div>
+                  <button id="addFileBtn" class="secondary-button" type="button">
+                    <span data-icon="file-plus"></span>
+                    添加
+                  </button>
+                </div>
+                <div id="fileList" class="file-list"></div>
+              </div>
+
+              <div class="at-section">
+                <div class="file-header">
+                  <div>
+                    <h4>@ 人</h4>
+                    <p>可用手机号、userId 或 all</p>
+                  </div>
+                  <button id="addMentionBtn" class="secondary-button" type="button">
+                    <span data-icon="user-plus"></span>
+                    添加
+                  </button>
+                </div>
+                <div id="mentionList" class="mention-list"></div>
+              </div>
+            </div>
+
+            <aside class="preview-panel">
+              <div class="preview-heading">
+                <h3>预览</h3>
+                <span id="scheduleSummary" class="status-badge neutral">单次发送</span>
+              </div>
+              <div class="preview-card">
+                <div id="previewIcon" class="preview-icon">D</div>
+                <div class="preview-content">
+                  <strong id="previewTitle">DDS Daily Update</strong>
+                  <pre id="previewMessage"></pre>
+                  <div id="previewFiles" class="preview-files"></div>
+                  <div id="previewMentions" class="preview-mentions"></div>
+                </div>
+              </div>
+              <div id="validationMessages" class="validation-messages"></div>
+              <div class="preview-actions">
+                <button id="dryRunBtn" class="secondary-button" type="button">
+                  <span data-icon="play"></span>
+                  模拟发送
+                </button>
+                <button id="exportBtn" class="primary-button" type="button">
+                  <span data-icon="download"></span>
+                  导出任务
+                </button>
+              </div>
+            </aside>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <div id="toastHost" class="toast-host" aria-live="polite"></div>
+    <script src="./vendor/lucide.min.js"></script>
+    <script src="./app.js"></script>
+  </body>
+</html>

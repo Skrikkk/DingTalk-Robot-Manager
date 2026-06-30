@@ -85,6 +85,10 @@
                   <span data-icon="shield-check"></span>
                   检查
                 </button>
+                <button id="fetchIdsBtn" class="secondary-button" type="button">
+                  <span data-icon="key-round"></span>
+                  获取
+                </button>
               </div>
             </div>
 
@@ -112,13 +116,17 @@
               <label>
                 <span>环境</span>
                 <select id="environment">
-                  <option>生产</option>
-                  <option>测试</option>
-                  <option>沙箱</option>
+                  <option value="生产">生产（真实发送消息）</option>
+                  <option value="测试">测试（只校验参数，不发送消息）</option>
+                  <option value="沙箱">沙箱（调用测试接口）</option>
                 </select>
               </label>
             </div>
 
+            <div class="library-note">
+              <span data-icon="package"></span>
+              <span>自动获取需要 Python 库：requests；钉钉上传附件通常还需要 AppKey、AppSecret 与对应开放平台权限。</span>
+            </div>
             <div id="permissionList" class="permission-list"></div>
           </section>
         </section>
@@ -132,7 +140,6 @@
             <div class="segmented">
               <button class="active" type="button" data-mode="once">单次</button>
               <button type="button" data-mode="schedule">定时</button>
-              <button type="button" data-mode="recurring">定期</button>
             </div>
           </div>
 
@@ -147,7 +154,7 @@
                   <span>发送时间</span>
                   <input id="sendTime" type="time" />
                 </label>
-                <label>
+                <label class="schedule-only">
                   <span>重复规则</span>
                   <select id="repeatRule">
                     <option value="none">不重复</option>
@@ -158,9 +165,9 @@
                     <option value="cron">Cron 表达式</option>
                   </select>
                 </label>
-                <label>
-                  <span>Cron / 文件日期模式</span>
-                  <input id="patternInput" type="text" placeholder="{yyyyMMdd} 或 .*{yyMMdd}.*\\.pdf" />
+                <label class="schedule-only">
+                  <span>文件地址 / Python代码</span>
+                  <input id="patternInput" type="text" placeholder="D:/path/report-{yyyyMMdd}.pdf 或 python: find_report()" />
                 </label>
               </div>
 
@@ -173,7 +180,7 @@
                 <div class="file-header">
                   <div>
                     <h4>附件</h4>
-                    <p>支持固定文件，也支持按日期规则匹配每日变化文件</p>
+                    <p>选择需要上传的文件，并指定上传渠道</p>
                   </div>
                   <button id="addFileBtn" class="secondary-button" type="button">
                     <span data-icon="file-plus"></span>

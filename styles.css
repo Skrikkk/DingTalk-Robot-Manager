@@ -392,6 +392,7 @@ button {
   display: inline-flex;
   align-items: center;
   gap: 10px;
+  flex-wrap: wrap;
 }
 
 .panel-heading p,
@@ -488,6 +489,20 @@ textarea:focus {
   background: #eef2f7;
 }
 
+.library-note {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+  padding: 9px 10px;
+  color: #40536d;
+  background: var(--primary-faint);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
 .permission-list {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -500,9 +515,30 @@ textarea:focus {
   border-radius: 8px;
   padding: 10px;
   display: grid;
-  grid-template-columns: 22px minmax(0, 1fr);
-  gap: 8px;
-  align-items: start;
+  grid-template-columns: 28px minmax(0, 1fr);
+  gap: 10px;
+  align-items: center;
+}
+
+.permission-icon {
+  width: 24px;
+  height: 24px;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.permission-icon.ok {
+  color: var(--ok);
+  background: #e8f6ef;
+}
+
+.permission-icon.warn {
+  color: var(--warning);
+  background: #fff4dc;
 }
 
 .permission-item strong {
@@ -523,7 +559,7 @@ textarea:focus {
 
 .segmented {
   display: inline-grid;
-  grid-template-columns: repeat(3, minmax(70px, 1fr));
+  grid-template-columns: repeat(2, minmax(76px, 1fr));
   background: var(--primary-soft);
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -580,7 +616,7 @@ textarea:focus {
 }
 
 .file-row {
-  grid-template-columns: minmax(0, 1.1fr) 120px minmax(0, 0.9fr) 38px 38px;
+  grid-template-columns: minmax(0, 1fr) 190px 38px 38px;
 }
 
 .mention-row {

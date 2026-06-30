@@ -16,7 +16,9 @@ const iconMap = {
   trash: "trash-2",
   folder: "folder-open",
   file: "file",
-  at: "at-sign"
+  at: "at-sign",
+  "key-round": "key-round",
+  package: "package"
 };
 
 let contextRobotId = null;
@@ -61,7 +63,7 @@ const initialState = {
         pattern: "{yyyyMMdd}",
         message: "DDS-TEST.\n{today_yymmdd}\n数据更新如下:",
         files: [
-          { path: "D:/Work/Julien/00 F9价格上传/02 合约原文件/00 GL/GL TPEB 1st of 14th of July 2026.pdf", mode: "fixed", pattern: "" }
+          { path: "D:/Work/Julien/00 F9价格上传/02 合约原文件/00 GL/GL TPEB 1st of 14th of July 2026.pdf", channel: "upload" }
         ],
         mentions: [{ type: "userId", value: "411127371237758256" }]
       }
@@ -107,7 +109,7 @@ const initialState = {
   ]
 };
 
-let state = loadState();
+let state = normalizeState(loadState());
 
 function todayISO() {
   return new Date().toISOString().slice(0, 10);
@@ -120,6 +122,26 @@ function loadState() {
   } catch {
     return structuredClone(initialState);
   }
+}
+
+function normalizeState(nextState) {
+  if (!nextState || !Array.isArray(nextState.robots)) return structuredClone(initialState);
+  if (!["once", "schedule"].includes(nextState.sendMode)) nextState.sendMode = "schedule";
+  nextState.robots.forEach((robot) => {
+    robot.credentials ||= {};
+    robot.permissions ||= {};
+    robot.task ||= {};
+    robot.task.files ||= [];
+    robot.task.mentions ||= [];
+    robot.task.repeatRule ||= "none";
+    robot.task.pattern ||= "";
+    robot.task.files.forEach((file) => {
+      file.channel ||= file.mode === "regex" ? "python" : "upload";
+      delete file.mode;
+      delete file.pattern;
+    });
+  });
+  return nextState;
 }
 
 function persist() {
@@ -221,6 +243,7 @@ function renderForm() {
   renderFiles(robot);
   renderMentions(robot);
   renderSegmented();
+  renderScheduleFields();
   renderPreview(robot);
 }
 
@@ -238,7 +261,7 @@ function renderPermissions(robot) {
       const ok = robot.permissions[key];
       return `
         <div class="permission-item">
-          <span class="status-badge ${ok ? "ok" : "warn"}">${ok ? "OK" : "!"}</span>
+          <span class="permission-icon ${ok ? "ok" : "warn"}">${ok ? "✓" : "!"}</span>
           <div><strong>${title}</strong><span>${desc}</span></div>
         </div>
       `;
@@ -254,12 +277,11 @@ function renderFiles(robot) {
     row.className = "file-row";
     row.innerHTML = `
       <input value="${escapeAttr(file.path)}" data-file-field="path" data-index="${index}" placeholder="D:/path/report-{yyyyMMdd}.pdf" />
-      <select data-file-field="mode" data-index="${index}">
-        <option value="fixed" ${file.mode === "fixed" ? "selected" : ""}>固定文件</option>
-        <option value="date-template" ${file.mode === "date-template" ? "selected" : ""}>日期模板</option>
-        <option value="regex" ${file.mode === "regex" ? "selected" : ""}>正则匹配</option>
+      <select data-file-field="channel" data-index="${index}" title="上传渠道">
+        <option value="upload" ${file.channel === "upload" ? "selected" : ""}>上传渠道：本地文件</option>
+        <option value="mediaId" ${file.channel === "mediaId" ? "selected" : ""}>上传渠道：mediaId</option>
+        <option value="python" ${file.channel === "python" ? "selected" : ""}>上传渠道：Python代码</option>
       </select>
-      <input value="${escapeAttr(file.pattern || "")}" data-file-field="pattern" data-index="${index}" placeholder="可选规则" />
       <button class="mini-button" type="button" title="选择文件" data-browse-file="${index}" style="color: var(--primary)"><span data-icon="folder"></span></button>
       <button class="mini-button" type="button" title="删除附件" data-remove-file="${index}"><span data-icon="trash"></span></button>
       <input type="file" data-file-picker="${index}" hidden />
@@ -290,6 +312,13 @@ function renderMentions(robot) {
 function renderSegmented() {
   document.querySelectorAll(".segmented button").forEach((button) => {
     button.classList.toggle("active", button.dataset.mode === state.sendMode);
+  });
+}
+
+function renderScheduleFields() {
+  const show = state.sendMode === "schedule";
+  document.querySelectorAll(".schedule-only").forEach((node) => {
+    node.hidden = !show;
   });
 }
 
@@ -326,7 +355,7 @@ function scheduleText(robot) {
   const time = `${robot.task.sendDate || "未定日期"} ${robot.task.sendTime || "未定时间"}`;
   if (state.sendMode === "once" || rule === "none") return `单次 ${time}`;
   const labels = { daily: "每天", weekday: "工作日", weekly: "每周", monthly: "每月", cron: "Cron" };
-  return `${labels[rule] || "定期"} ${robot.task.sendTime || ""}`;
+  return `定时 ${labels[rule] || "不重复"} ${robot.task.sendTime || ""}`;
 }
 
 function renderTokens(text) {
@@ -501,6 +530,18 @@ function wireEvents() {
     }
   });
 
+  document.querySelector("#fetchIdsBtn").addEventListener("click", () => {
+    const robot = selectedRobot();
+    const keyword = prompt("输入用于自动获取 ID 的关键字段，例如手机号、姓名、部门名或群机器人关键词", robot.credentials.testAt || robot.credentials.userId || "");
+    if (!keyword) return;
+    updateSelected((item) => {
+      item.credentials.testAt ||= keyword.trim();
+      item.credentials.userId ||= `${item.provider}_${keyword.trim()}`;
+      item.credentials.deptId ||= "待接口返回";
+    });
+    toast("已生成获取任务", "后续 Python 调用将使用 requests，并根据关键字段获取 userId、deptId 或机器人信息。");
+  });
+
   [
     ["appKey", (robot, value) => (robot.credentials.appKey = value)],
     ["appSecret", (robot, value) => (robot.credentials.appSecret = value)],
@@ -585,15 +626,12 @@ function wireEvents() {
     const button = event.target.closest("button[data-mode]");
     if (!button) return;
     state.sendMode = button.dataset.mode;
-    if (state.sendMode === "recurring" && selectedRobot().task.repeatRule === "none") {
-      selectedRobot().task.repeatRule = "daily";
-    }
     persist();
     renderAll();
   });
 
   document.querySelector("#addFileBtn").addEventListener("click", () => {
-    updateSelected((robot) => robot.task.files.push({ path: "", mode: "fixed", pattern: "" }));
+    updateSelected((robot) => robot.task.files.push({ path: "", channel: "upload" }));
   });
 
   document.querySelector("#addMentionBtn").addEventListener("click", () => {
@@ -626,7 +664,7 @@ function wireEvents() {
           updateSelected((robot) => {
             const index = Number(browseFile.dataset.browseFile);
             robot.task.files[index].path = paths[0];
-            paths.slice(1).forEach((path) => robot.task.files.push({ path, mode: "fixed", pattern: "" }));
+            paths.slice(1).forEach((path) => robot.task.files.push({ path, channel: "upload" }));
           });
         });
       } else {

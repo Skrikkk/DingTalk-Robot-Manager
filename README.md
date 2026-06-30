@@ -1,4 +1,4 @@
-# Robot Sender Window UI
+# DingTalk-Robot-Manager
 
 260630 AMD#1
 
@@ -36,8 +36,4 @@
 
 - 接入 `DingTalk_Robot Send` 的 Python 发送链路。
 - 接入本机定时任务或后台服务。
-- 同步到 GitHub 仓库并配置版本发布。
-
-## GitHub
-
-当前目录不是 Git 仓库。需要同步到 GitHub 时，先提供目标仓库地址，或在本目录初始化仓库后添加 remote。
+- 配置打包 exe、自动更新和版本发布。

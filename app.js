@@ -558,6 +558,11 @@ function wireEvents() {
 
   document.querySelector("#closeProfileModal").addEventListener("click", closeProfileModal);
   document.querySelector("#cancelProfileBtn").addEventListener("click", closeProfileModal);
+  document.querySelector("#profileModal").addEventListener("click", (event) => {
+    if (!event.target.closest(".modal-panel")) {
+      closeProfileModal();
+    }
+  });
   document.querySelector("#profileIconBtn").addEventListener("click", async () => {
     await chooseRobotIcon(contextRobot());
     openProfileModal(contextRobot());

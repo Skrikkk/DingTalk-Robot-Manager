@@ -200,16 +200,16 @@
                 <div id="mentionList" class="mention-list"></div>
               </div>
             </div>
-              <div class="config-actions">
-                <button id="dryRunBtn" class="secondary-button" type="button">
-                  <span data-icon="play"></span>
-                  模拟发送
-                </button>
-                <button id="exportBtn" class="primary-button" type="button">
-                  <span data-icon="download"></span>
-                  导出任务
-                </button>
-              </div>
+            <div class="config-actions">
+              <button id="dryRunBtn" class="secondary-button" type="button">
+                <span data-icon="play"></span>
+                模拟发送
+              </button>
+              <button id="exportBtn" class="primary-button" type="button">
+                <span data-icon="download"></span>
+                导出任务
+              </button>
+            </div>
           </div>
         </section>
       </main>
@@ -268,6 +268,31 @@
         <div class="modal-actions">
           <button id="cancelProfileBtn" class="ghost-button" type="button">取消</button>
           <button id="saveProfileBtn" class="primary-button" type="button">保存档案</button>
+        </div>
+      </section>
+    </div>
+
+    <div id="permissionModal" class="modal-backdrop" hidden>
+      <section class="modal-panel permission-modal-panel">
+        <div class="modal-heading">
+          <div>
+            <span id="permissionStatus" class="status-badge neutral">权限详情</span>
+            <h3 id="permissionTitle">权限详情</h3>
+            <p id="permissionDesc">查看所需权限、参数和钉钉官方文档。</p>
+          </div>
+          <button id="closePermissionModal" class="mini-button" type="button" title="关闭">
+            <span data-icon="close"></span>
+          </button>
+        </div>
+        <div class="permission-detail-grid">
+          <section>
+            <h4>需要准备</h4>
+            <ul id="permissionNeeds"></ul>
+          </section>
+          <section>
+            <h4>钉钉官方文档</h4>
+            <div id="permissionDocs" class="doc-link-list"></div>
+          </section>
         </div>
       </section>
     </div>

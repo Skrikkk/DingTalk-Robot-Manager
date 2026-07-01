@@ -19,7 +19,8 @@ const iconMap = {
   file: "file",
   at: "at-sign",
   "key-round": "key-round",
-  package: "package"
+  package: "package",
+  "external-link": "external-link"
 };
 
 let contextRobotId = null;
@@ -29,6 +30,69 @@ const providerMeta = {
   dingtalk: { label: "钉钉", hint: "oapi.dingtalk.com", color: "#2563eb" },
   feishu: { label: "飞书", hint: "open.feishu.cn", color: "#0ea5e9" },
   wecom: { label: "企业微信", hint: "qyapi.weixin.qq.com", color: "#1d4ed8" }
+};
+
+const permissionHelp = {
+  webhook: {
+    title: "Webhook 格式",
+    needs: [
+      "在钉钉群中添加自定义机器人，并复制机器人 Webhook 地址。",
+      "Webhook 需要包含 access_token；如启用加签，还需要保存机器人 secret。",
+      "安全设置至少配置一种校验方式，例如关键词、加签或 IP 地址段。"
+    ],
+    docs: [
+      ["创建自定义机器人", "https://open.dingtalk.com/document/dingstart/custom-bot-creation-and-installation"],
+      ["自定义机器人发送群聊消息", "https://open.dingtalk.com/document/development/custom-bot-to-send-group-chat-messages"]
+    ]
+  },
+  sendText: {
+    title: "发送消息",
+    needs: [
+      "机器人已添加到目标群，并且 Webhook 可访问。",
+      "消息内容需要匹配机器人安全设置，例如关键词校验。",
+      "按钉钉支持的消息类型组织请求体，例如 text、markdown、link、actionCard。"
+    ],
+    docs: [
+      ["自定义机器人发送群消息", "https://open.dingtalk.com/document/development/custom-robots-send-group-messages"],
+      ["机器人消息发送与接收类型", "https://open.dingtalk.com/document/development/robot-message-type"]
+    ]
+  },
+  uploadFile: {
+    title: "上传附件",
+    needs: [
+      "需要企业内部应用的 AppKey / AppSecret，并用 access_token 调用媒体上传接口。",
+      "本地文件先上传为 media_id，再在支持的机器人消息中引用。",
+      "确认应用已具备上传媒体文件或文件相关接口权限。"
+    ],
+    docs: [
+      ["上传媒体文件", "https://open.dingtalk.com/document/development/upload-media-files"],
+      ["机器人消息发送与接收类型", "https://open.dingtalk.com/document/development/robot-message-type"]
+    ]
+  },
+  mentions: {
+    title: "@ 人",
+    needs: [
+      "在发送消息请求中配置 atMobiles、atUserIds 或 isAtAll。",
+      "若使用 userId，需要提前获取用户 ID；若使用手机号，需要成员手机号可用于匹配。",
+      "群机器人必须在目标群内，@ 信息才会在该群消息中生效。"
+    ],
+    docs: [
+      ["自定义机器人发送群聊消息", "https://open.dingtalk.com/document/development/custom-bot-to-send-group-chat-messages"],
+      ["自定义机器人发送群消息", "https://open.dingtalk.com/document/development/custom-robots-send-group-messages"]
+    ]
+  },
+  schedule: {
+    title: "定时任务",
+    needs: [
+      "自定义机器人负责接收发送请求；定时触发由 Robot Manager、本机计划任务或后台服务完成。",
+      "需要保存可重复执行的发送配置：Webhook、消息、附件路径、@ 人和发送时间。",
+      "定时任务触发时仍按钉钉机器人发送消息接口发起请求。"
+    ],
+    docs: [
+      ["自定义机器人发送群聊消息", "https://open.dingtalk.com/document/development/custom-bot-to-send-group-chat-messages"],
+      ["自定义机器人发送群消息", "https://open.dingtalk.com/document/development/custom-robots-send-group-messages"]
+    ]
+  }
 };
 
 const initialState = {
@@ -261,12 +325,12 @@ function renderPermissions(robot) {
     .sort((a, b) => Number(a.ok) - Number(b.ok) || a.priority - b.priority);
   const wrap = document.querySelector("#permissionList");
   wrap.innerHTML = sortedItems
-    .map(({ title, desc, ok }) => {
+    .map(({ key, title, desc, ok }) => {
       return `
-        <div class="permission-item">
+        <button class="permission-item" type="button" data-permission-key="${key}">
           <span class="permission-icon ${ok ? "ok" : "warn"}">${ok ? "✓" : "!"}</span>
           <div><strong>${title}</strong><span>${desc}</span></div>
-        </div>
+        </button>
       `;
     })
     .join("");
@@ -395,6 +459,37 @@ function openProfileModal(robot = selectedRobot()) {
 
 function closeProfileModal() {
   document.querySelector("#profileModal").hidden = true;
+}
+
+function openPermissionModal(key) {
+  const robot = selectedRobot();
+  const help = permissionHelp[key];
+  if (!help) return;
+  const isSupported = Boolean(robot.permissions[key]);
+  const status = document.querySelector("#permissionStatus");
+  status.className = `status-badge ${isSupported ? "ok" : "warn"}`;
+  status.textContent = isSupported ? "当前支持" : "当前不支持";
+  document.querySelector("#permissionTitle").textContent = help.title;
+  document.querySelector("#permissionDesc").textContent = isSupported
+    ? "当前配置已满足基础条件，下面是对应权限和钉钉官方文档。"
+    : "当前配置缺少必要条件，下面列出需要补齐的权限、参数和钉钉官方文档。";
+  document.querySelector("#permissionNeeds").innerHTML = help.needs
+    .map((item) => `<li>${escapeHTML(item)}</li>`)
+    .join("");
+  document.querySelector("#permissionDocs").innerHTML = help.docs
+    .map(([label, url]) => `
+      <a class="doc-link" href="${escapeAttr(url)}" target="_blank" rel="noopener noreferrer">
+        <span>${escapeHTML(label)}</span>
+        <span data-icon="external-link"></span>
+      </a>
+    `)
+    .join("");
+  document.querySelector("#permissionModal").hidden = false;
+  renderIcons();
+}
+
+function closePermissionModal() {
+  document.querySelector("#permissionModal").hidden = true;
 }
 
 function duplicateRobot(robot = selectedRobot()) {
@@ -566,6 +661,12 @@ function wireEvents() {
     }
   });
 
+  document.querySelector("#permissionList").addEventListener("click", (event) => {
+    const card = event.target.closest("[data-permission-key]");
+    if (!card) return;
+    openPermissionModal(card.dataset.permissionKey);
+  });
+
   document.querySelector("#fetchIdsBtn").addEventListener("click", () => {
     const robot = selectedRobot();
     const keyword = prompt("输入用于自动获取 ID 的关键字段，例如手机号、姓名、部门名或群机器人关键词", robot.credentials.testAt || robot.credentials.userId || "");
@@ -641,6 +742,12 @@ function wireEvents() {
   document.querySelector("#profileModal").addEventListener("click", (event) => {
     if (!event.target.closest(".modal-panel")) {
       closeProfileModal();
+    }
+  });
+  document.querySelector("#closePermissionModal").addEventListener("click", closePermissionModal);
+  document.querySelector("#permissionModal").addEventListener("click", (event) => {
+    if (!event.target.closest(".modal-panel")) {
+      closePermissionModal();
     }
   });
   document.querySelector("#profileIconBtn").addEventListener("click", async () => {
